@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 5158407825582105973}
   - component: {fileID: 5158407825582105972}
   - component: {fileID: 5158407825582105971}
+  - component: {fileID: 5879866694648459601}
   m_Layer: 5
   m_Name: PurpleCandy
   m_TagString: Untagged
@@ -34,11 +35,11 @@ RectTransform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 50, y: 50}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -445, y: -865}
   m_SizeDelta: {x: 90, y: 90}
-  m_Pivot: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5158407825582105974
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -138,3 +139,23 @@ MonoBehaviour:
   - {fileID: 21300000, guid: b990290d488981e4daef720df21cac96, type: 3}
   - {fileID: 21300000, guid: f4af0fa8dc6ee4441ac3bc42d3b955c3, type: 3}
   - {fileID: 21300000, guid: f51e517586c8a0c4d8742b00ec1064be, type: 3}
+  m_swapTime: 0.3
+--- !u!95 &5879866694648459601
+Animator:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5158407825582105969}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: eabc38c291d073e43a59867de4723e44, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorControllerStateOnDisable: 0

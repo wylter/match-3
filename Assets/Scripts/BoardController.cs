@@ -13,11 +13,11 @@ public class BoardController : MonoBehaviour
 
     [Header("Board Settings")]
     [SerializeField]
-    private int m_horizontalSize;
+    private int m_horizontalSize = 8;
     [SerializeField]
-    private int m_verticalSize;
+    private int m_verticalSize = 8;
     [SerializeField]
-    private RectTransform m_spawn;
+    private RectTransform m_spawn = null;
     [SerializeField]
     private int m_distanceUnits = 100;
 
@@ -26,7 +26,7 @@ public class BoardController : MonoBehaviour
     [SerializeField]
     private int test;
     [SerializeField]
-    public CandyPrefab[] m_candyPrefabs;
+    public CandyPrefab[] m_candyPrefabs = null;
 
     private Dictionary<CandyColor, Candy> m_candyPrefabsDictonary;
 
@@ -40,10 +40,14 @@ public class BoardController : MonoBehaviour
     private Vector2Int m_startPosition;
     private Vector2Int m_endPosition;
 
-    private int m_movingCandiesNumber = 0;
+    public int m_movingCandiesNumber = 0;
     private List<Candy> m_movedCandies;
+    public int m_dyingCandiesNumber = 0;
 
     private void Awake(){
+        Debug.Assert(m_spawn != null, "Spawn is null");
+        Debug.Assert(m_candyPrefabs != null, "All candy prefabs are null");
+
         m_candyPrefabsDictonary = new Dictionary<CandyColor, Candy>();
         foreach (CandyPrefab candyPrefab in m_candyPrefabs){
             m_candyPrefabsDictonary.Add(candyPrefab.color, candyPrefab.candy);
@@ -81,14 +85,21 @@ public class BoardController : MonoBehaviour
                 }
 
                 //******Candy Assignement
-                Candy toInstantiate = m_candyPrefabsDictonary[(CandyColor)possibleColors[Random.Range(0, possibleColors.Count)]];
-                Candy candy = Instantiate(toInstantiate, m_startSpawnPosition, toInstantiate.transform.rotation) as Candy;
-                candy.gameObject.transform.SetParent(gameObject.transform, false);
-                candy.GetComponent<RectTransform>().anchoredPosition = m_startSpawnPosition + new Vector2(i * m_distanceUnits, j * m_distanceUnits);
+                Candy prefabToInstantiate = m_candyPrefabsDictonary[(CandyColor)possibleColors[Random.Range(0, possibleColors.Count)]];
+                Candy candy = InstatiateCandyAtPosition(prefabToInstantiate, m_startSpawnPosition + new Vector2(i * m_distanceUnits, j * m_distanceUnits));
                 candy.SetUpPosition(new Vector2Int(i, j));
+
                 m_board[i, j] = candy;
             }
         }
+    }
+
+    private Candy InstatiateCandyAtPosition(Candy prefabToInstatiate, Vector2 position) {
+        Candy candy = Instantiate(prefabToInstatiate, m_startSpawnPosition, prefabToInstatiate.transform.rotation) as Candy;
+        candy.gameObject.transform.SetParent(gameObject.transform, false);
+        candy.GetComponent<RectTransform>().anchoredPosition = position;
+
+        return candy;
     }
 
     public void CandyStartTouch(Vector2Int candyPosition){
@@ -118,17 +129,30 @@ public class BoardController : MonoBehaviour
     private IEnumerator TryToSwapCandies(){
         SwapCandies();
 
-        m_movingCandiesNumber += 2;
-
         while (m_movingCandiesNumber > 0){
             yield return null;
         }
 
-        if (!CheckAllStoppedCandies()){
+        HashSet<Candy> candiesToDestory = CheckAllStoppedCandies();
+
+        if (candiesToDestory.Count == 0) {
             SwapCandies();
-            m_movingCandiesNumber += 2;
         } else {
-            RefillBoard();
+            do {
+
+                DestoryCandies(candiesToDestory);
+
+                while (m_dyingCandiesNumber > 0) {
+                    yield return null;
+                }
+
+                RefillBoard();
+
+                while (m_movingCandiesNumber > 0) {
+                    yield return null;
+                }
+                candiesToDestory = CheckAllStoppedCandies();
+            } while (candiesToDestory.Count > 0);
         }
 
         while (m_movingCandiesNumber > 0) {
@@ -143,9 +167,6 @@ public class BoardController : MonoBehaviour
         Vector2 startRectPosition = m_board[m_startPosition.x, m_startPosition.y].GetComponent<RectTransform>().position;
         Vector2 endRectPosition = m_board[m_endPosition.x, m_endPosition.y].GetComponent<RectTransform>().position;
 
-        Debug.Log("Swapping " + m_startPosition.x + ":" + m_startPosition.y + "  " + m_endPosition.x + ":" + m_endPosition.y);
-        Debug.Log("---- " + startRectPosition.x + ":" + startRectPosition.y + "  " + endRectPosition.x + ":" + endRectPosition.y);
-
         m_board[m_startPosition.x, m_startPosition.y].MoveTo(m_endPosition, endRectPosition);
         m_board[m_endPosition.x, m_endPosition.y].MoveTo(m_startPosition, startRectPosition);
 
@@ -154,14 +175,26 @@ public class BoardController : MonoBehaviour
         m_board[m_endPosition.x, m_endPosition.y] = temp;
     }
 
+    public void startedMoving() {
+        m_movingCandiesNumber++;
+    }
+
     public void candyStopped(Candy candy){
         m_movingCandiesNumber--;
         m_movedCandies.Add(candy);
     }
 
-    private bool CheckAllStoppedCandies(){
+    public void candyStartedDying() {
+        m_dyingCandiesNumber++;
+    }
 
-        List<Candy> candiesToDestory = new List<Candy>();
+    public void candyFinishedDying() {
+        m_dyingCandiesNumber--;
+    }
+
+    private HashSet<Candy> CheckAllStoppedCandies(){
+
+        HashSet<Candy> candiesToDestory = new HashSet<Candy>();
 
         foreach (Candy candy in m_movedCandies){
             int combo = 1;
@@ -169,12 +202,12 @@ public class BoardController : MonoBehaviour
             List<Candy> comboCandies = new List<Candy>();
 
             //Search in vertical
-            for (int i = 1; !(candyPosition.y + i >= m_verticalSize || m_board[candyPosition.x, candyPosition.y + i].m_color != candy.m_color); i++){
+            for (int i = 1; candyPosition.y + i < m_verticalSize && m_board[candyPosition.x, candyPosition.y + i].m_color == candy.m_color; i++){
  
                 combo++;
                 comboCandies.Add(m_board[candyPosition.x, candyPosition.y + i]);
             }
-            for (int i = -1; !(candyPosition.y + i < 0 || m_board[candyPosition.x, candyPosition.y + i].m_color != candy.m_color); i--)
+            for (int i = -1; candyPosition.y + i >= 0 && m_board[candyPosition.x, candyPosition.y + i].m_color == candy.m_color; i--)
             {
 
                 combo++;
@@ -184,20 +217,20 @@ public class BoardController : MonoBehaviour
             //Check if there was a vertical combo
             if (combo >= 3){
                 candiesToDestory.Add(candy);
-                candiesToDestory.AddRange(comboCandies);
+                candiesToDestory.UnionWith(comboCandies);
             }
 
             combo = 1;
             comboCandies.Clear();
 
             //Search in horizontal
-            for (int i = 1; !(candyPosition.x + i >= m_horizontalSize || m_board[candyPosition.x + i, candyPosition.y].m_color != candy.m_color); i++)
+            for (int i = 1; candyPosition.x + i < m_horizontalSize && m_board[candyPosition.x + i, candyPosition.y].m_color == candy.m_color; i++)
             {
 
                 combo++;
                 comboCandies.Add(m_board[candyPosition.x + i, candyPosition.y]);
             }
-            for (int i = -1; !(candyPosition.x + i < 0 || m_board[candyPosition.x + i, candyPosition.y].m_color != candy.m_color); i--)
+            for (int i = -1; candyPosition.x + i >= 0 && m_board[candyPosition.x + i, candyPosition.y].m_color == candy.m_color; i--)
             {
 
                 combo++;
@@ -206,19 +239,23 @@ public class BoardController : MonoBehaviour
 
             if (combo >= 3){
                 candiesToDestory.Add(candy);
-                candiesToDestory.AddRange(comboCandies);
+                candiesToDestory.UnionWith(comboCandies);
             }
         }
 
         m_movedCandies.Clear();
 
+
+
+        return candiesToDestory;
+    }
+
+    private void DestoryCandies(HashSet<Candy> candiesToDestory) {
         foreach (Candy candy in candiesToDestory) {
             Vector2Int candyPosition = candy.getBoardPosition();
             m_board[candyPosition.x, candyPosition.y] = null;
-            Destroy(candy.gameObject);
+            candy.Die();
         }
-
-        return candiesToDestory.Count > 0;
     }
 
     private void RefillBoard(){
@@ -238,8 +275,8 @@ public class BoardController : MonoBehaviour
 
                     for (int l = j + k; l < m_verticalSize; l++) {
                         refillMatrix[i, l] -= k;
-                        candiesToSpawn[i] += k;
                     }
+                    candiesToSpawn[i] += k;
 
                     j += k - 1;
                 }
@@ -249,11 +286,22 @@ public class BoardController : MonoBehaviour
         for (int i = 0; i < m_horizontalSize; i++) {
             for (int j = 0; j < m_verticalSize; j++) {
                 if (refillMatrix[i, j] < 0) {
-                    m_movingCandiesNumber++;
                     m_board[i, j].MoveDown(new Vector2Int(i, j + refillMatrix[i, j]), refillMatrix[i, j] * m_distanceUnits);
                     m_board[i, j + refillMatrix[i, j]] = m_board[i, j];
                 }
             }
+           
+            for (int j = 0; j < candiesToSpawn[i]; j++) {
+                Candy prefabToInstantiate = m_candyPrefabsDictonary.Values.ToList()[Random.Range(0, m_candyPrefabsDictonary.Count())];
+                Candy candy = InstatiateCandyAtPosition(prefabToInstantiate, m_startSpawnPosition + new Vector2(i * m_distanceUnits, (m_verticalSize + j) * m_distanceUnits));
+
+                int verticalIndex = m_verticalSize - candiesToSpawn[i] + j;
+
+                candy.SetUp();
+                m_board[i, verticalIndex] = candy;
+                candy.MoveDown(new Vector2Int(i, verticalIndex), -(candiesToSpawn[i]) * m_distanceUnits);
+            }
+
         }
     }
 }

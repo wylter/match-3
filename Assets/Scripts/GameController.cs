@@ -7,14 +7,19 @@ public class GameController : MonoBehaviour
 {
 
     [SerializeField]
-    private GameObject m_pauseMenu;
+    private GameObject m_pauseMenu = null;
     [SerializeField]
-    private float m_startTime;
+    private float m_startTime = 60f;
     [SerializeField]
-    private TextMeshProUGUI m_timerText;
+    private TextMeshProUGUI m_timerText = null;
 
     private float m_remeiningTime;
     private Animator m_pauseAnimator;
+
+    private void Awake() {
+        Debug.Assert(m_timerText != null, "Timer text is null");
+        Debug.Assert(m_pauseMenu != null, "Pause Menu is null");
+    }
 
     private void Start() {
         m_pauseAnimator = m_pauseMenu.GetComponent<Animator>();

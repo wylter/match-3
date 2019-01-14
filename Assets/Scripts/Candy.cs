@@ -9,7 +9,7 @@ public class Candy : MonoBehaviour, IPointerEnterHandler, IPointerDownHandler, I
     [SerializeField]
     public CandyColor m_color;
     [SerializeField]
-    private Sprite[] m_sprites;
+    private Sprite[] m_sprites = null;
     [SerializeField]
     private float m_swapTime = 0.3f;
 
@@ -19,12 +19,23 @@ public class Candy : MonoBehaviour, IPointerEnterHandler, IPointerDownHandler, I
 
     private RectTransform m_rectTranform;
 
+    private Animator m_animator;
+
+    private void Awake() {
+        Debug.Assert(m_sprites != null, "Sprites are all null");
+    }
+
 
     // Start is called before the first frame update
     void Start(){
+        SetUp();
+    }
+
+    public void SetUp() {
         GetComponent<Image>().sprite = m_sprites[Random.Range(0, m_sprites.Length)];
         m_board = transform.parent.GetComponent<BoardController>();
         m_rectTranform = GetComponent<RectTransform>();
+        m_animator = GetComponent<Animator>();
     }
 
     public void SetUpPosition(Vector2Int boardPosition){
@@ -48,6 +59,7 @@ public class Candy : MonoBehaviour, IPointerEnterHandler, IPointerDownHandler, I
     }
 
     public void MoveTo(Vector2Int newBoardPosition, Vector2 newRectTransformPosition){
+        m_board.startedMoving();
         m_boardPosition = newBoardPosition;
         StartCoroutine(Move(newRectTransformPosition));
     }
@@ -70,6 +82,16 @@ public class Candy : MonoBehaviour, IPointerEnterHandler, IPointerDownHandler, I
         m_rectTranform.position = newRectTransformPosition;
 
         m_board.candyStopped(this);
+    }
+
+    public void Die() {
+        m_animator.SetTrigger("Die");
+        m_board.candyStartedDying();
+    }
+
+    public void NotifyEndDeathAnimation() {
+        m_board.candyFinishedDying();
+        Destroy(gameObject);
     }
 
 }
