@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 5766203578998399325}
   - component: {fileID: 5766203578998399327}
   - component: {fileID: 5766203578998399326}
+  - component: {fileID: 447204408306404784}
   m_Layer: 5
   m_Name: BlueCandy
   m_TagString: Untagged
@@ -138,3 +139,19 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 2c031f9868c6d284d85aeb54f913d206, type: 3}
   - {fileID: 21300000, guid: 23a9f94c38f655949bc689b11ac68fb2, type: 3}
   - {fileID: 21300000, guid: f5b7a61cdd5960546ad8c600a71ad5d4, type: 3}
+--- !u!58 &447204408306404784
+CircleCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5766203578998399299}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  serializedVersion: 2
+  m_Radius: 0.5

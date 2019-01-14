@@ -730,13 +730,20 @@ MonoBehaviour:
   m_verticalSize: 8
   m_spawn: {fileID: 1807060719}
   m_distanceUnits: 110
+  test: 0
   m_candyPrefabs:
-  - {fileID: 5766203578998399326, guid: a65032588f3c53547b501ea38506314b, type: 3}
-  - {fileID: 3822172173302382311, guid: 45a9c27c16e5c3a4c9ca9587a843372b, type: 3}
-  - {fileID: 3843421688959754687, guid: bd1ff131779f269489cab788f5376765, type: 3}
-  - {fileID: 5158407825582105971, guid: f840c1074a30f864181df44eeb6399b5, type: 3}
-  - {fileID: 5645175608197601873, guid: 90cfe96bbdb628f4cb33096eea7d5f57, type: 3}
-  - {fileID: 2832701675111283060, guid: 513d367bbcb01e948a63da7ed429dd55, type: 3}
+  - color: 0
+    candy: {fileID: 5766203578998399326, guid: a65032588f3c53547b501ea38506314b, type: 3}
+  - color: 4
+    candy: {fileID: 3822172173302382311, guid: 45a9c27c16e5c3a4c9ca9587a843372b, type: 3}
+  - color: 5
+    candy: {fileID: 3843421688959754687, guid: bd1ff131779f269489cab788f5376765, type: 3}
+  - color: 3
+    candy: {fileID: 5158407825582105971, guid: f840c1074a30f864181df44eeb6399b5, type: 3}
+  - color: 1
+    candy: {fileID: 5645175608197601873, guid: 90cfe96bbdb628f4cb33096eea7d5f57, type: 3}
+  - color: 2
+    candy: {fileID: 2832701675111283060, guid: 513d367bbcb01e948a63da7ed429dd55, type: 3}
 --- !u!1 &1510905156
 GameObject:
   m_ObjectHideFlags: 0
