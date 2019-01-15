@@ -10,6 +10,11 @@ public class BoardController : MonoBehaviour
         public CandyColor color;
         public Candy candy;
     }
+    [System.Serializable]
+    public class ColorAssignment {
+        public CandyColor color;
+        public Color rgbaColor;
+    }
 
     [Header("Board Settings")]
     [SerializeField]
@@ -24,11 +29,17 @@ public class BoardController : MonoBehaviour
     [Space]
     [Header("Candy Prefabs Settings")]
     [SerializeField]
-    private int test;
-    [SerializeField]
     public CandyPrefab[] m_candyPrefabs = null;
+    [SerializeField]
+    public ColorAssignment[] m_candyColor2RGBAColor = null;
+
+    [Space]
+    [Header("Points Settings")]
+    [SerializeField]
+    private PointsController pointsController = null;
 
     private Dictionary<CandyColor, Candy> m_candyPrefabsDictonary;
+    private Dictionary<CandyColor, Color> m_candyColor2RGBAColorDictonary;
 
     private Candy[,] m_board;
 
@@ -47,10 +58,16 @@ public class BoardController : MonoBehaviour
     private void Awake(){
         Debug.Assert(m_spawn != null, "Spawn is null");
         Debug.Assert(m_candyPrefabs != null, "All candy prefabs are null");
+        Debug.Assert(m_candyColor2RGBAColor.Length == System.Enum.GetNames(typeof(CandyColor)).Length, "Please define a color for each CandyColor");
+        Debug.Assert(pointsController != null, "The points controller is null");
 
         m_candyPrefabsDictonary = new Dictionary<CandyColor, Candy>();
+        m_candyColor2RGBAColorDictonary = new Dictionary<CandyColor, Color>();
         foreach (CandyPrefab candyPrefab in m_candyPrefabs){
             m_candyPrefabsDictonary.Add(candyPrefab.color, candyPrefab.candy);
+        }
+        foreach (ColorAssignment colorAssigned in m_candyColor2RGBAColor) {
+            m_candyColor2RGBAColorDictonary.Add(colorAssigned.color, colorAssigned.rgbaColor);
         }
     }
 
@@ -198,6 +215,7 @@ public class BoardController : MonoBehaviour
 
         foreach (Candy candy in m_movedCandies){
             int combo = 1;
+            int points = 0;
             Vector2Int candyPosition = candy.getBoardPosition();
             List<Candy> comboCandies = new List<Candy>();
 
@@ -218,6 +236,7 @@ public class BoardController : MonoBehaviour
             if (combo >= 3){
                 candiesToDestory.Add(candy);
                 candiesToDestory.UnionWith(comboCandies);
+                points = 60;
             }
 
             combo = 1;
@@ -240,6 +259,10 @@ public class BoardController : MonoBehaviour
             if (combo >= 3){
                 candiesToDestory.Add(candy);
                 candiesToDestory.UnionWith(comboCandies);
+                points = 60;
+            }
+            if (points > 0) {
+                SpawnPoints(candy.GetComponent<RectTransform>().position, 60, candy.m_color);
             }
         }
 
@@ -303,5 +326,11 @@ public class BoardController : MonoBehaviour
             }
 
         }
+    }
+
+    private void SpawnPoints(Vector2 position, int points, CandyColor candyColor) {
+        PointsController point = Instantiate(pointsController, position, pointsController.transform.rotation) as PointsController;
+        point.gameObject.transform.SetParent(gameObject.transform, false);
+        point.SetUp(position, points, m_candyColor2RGBAColorDictonary[candyColor]);
     }
 }
