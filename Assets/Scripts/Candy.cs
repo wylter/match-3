@@ -13,7 +13,7 @@ public class Candy : MonoBehaviour, IPointerEnterHandler, IPointerDownHandler, I
     [SerializeField]
     private float m_swapTime = 0.3f;
 
-    private BoardController m_board;
+    protected BoardController m_board;
 
     private Vector2Int m_boardPosition;
 
@@ -84,7 +84,7 @@ public class Candy : MonoBehaviour, IPointerEnterHandler, IPointerDownHandler, I
         m_board.candyStopped(this);
     }
 
-    public void Die() {
+    public virtual void Die() {
         m_animator.SetTrigger("Die");
         m_board.candyStartedDying();
     }

@@ -7,8 +7,9 @@ public class BoardController : MonoBehaviour
 {
     [System.Serializable]
     public class CandyPrefab{
-        public CandyColor color;
-        public Candy candy;
+        public Candy candy = null;
+        public Candy bombPowerUp = null;
+        public Candy freezePowerUp = null;
     }
     [System.Serializable]
     public class ColorAssignment {
@@ -25,6 +26,8 @@ public class BoardController : MonoBehaviour
     private RectTransform m_spawn = null;
     [SerializeField]
     private int m_distanceUnits = 100;
+    [SerializeField]
+    private GameController m_gameController = null;
 
     [Space]
     [Header("Candy Prefabs Settings")]
@@ -34,12 +37,23 @@ public class BoardController : MonoBehaviour
     public ColorAssignment[] m_candyColor2RGBAColor = null;
 
     [Space]
+    [Header("PowerUp Settings")]
+    public int m_selectedPowerUp = 0;
+    [SerializeField]
+    public int m_powerUpPercentualChance;
+    [SerializeField]
+    public float m_freezePowerUpSeconds = 5f;
+
+    [Space]
     [Header("Points Settings")]
     [SerializeField]
-    private PointsController pointsController = null;
+    private PointsController m_pointsController = null;
 
-    private Dictionary<CandyColor, Candy> m_candyPrefabsDictonary;
+    private Dictionary<CandyColor, List<Candy>> m_candyPrefabsDictonary;
     private Dictionary<CandyColor, Color> m_candyColor2RGBAColorDictonary;
+
+    private HashSet<Candy> m_candiesDestroyedByBombs;
+    private bool candiesAreExploding = false;
 
     private Candy[,] m_board;
 
@@ -55,16 +69,29 @@ public class BoardController : MonoBehaviour
     private List<Candy> m_movedCandies;
     public int m_dyingCandiesNumber = 0;
 
+    public float m_remeiningPausedTime = -1f;
+
     private void Awake(){
         Debug.Assert(m_spawn != null, "Spawn is null");
         Debug.Assert(m_candyPrefabs != null, "All candy prefabs are null");
         Debug.Assert(m_candyColor2RGBAColor.Length == System.Enum.GetNames(typeof(CandyColor)).Length, "Please define a color for each CandyColor");
-        Debug.Assert(pointsController != null, "The points controller is null");
+        Debug.Assert(m_pointsController != null, "The points controller is null");
+        Debug.Assert(m_gameController != null, "GameController is null");
 
-        m_candyPrefabsDictonary = new Dictionary<CandyColor, Candy>();
+        m_candyPrefabsDictonary = new Dictionary<CandyColor, List<Candy>>();
         m_candyColor2RGBAColorDictonary = new Dictionary<CandyColor, Color>();
         foreach (CandyPrefab candyPrefab in m_candyPrefabs){
-            m_candyPrefabsDictonary.Add(candyPrefab.color, candyPrefab.candy);
+            Debug.Assert(candyPrefab.candy != null, "Candy in prefab vector is null");
+            Debug.Assert(candyPrefab.bombPowerUp != null, "Bomb in prefab vector is null");
+            Debug.Assert(candyPrefab.freezePowerUp != null, "Freeze in prefab vector is null");
+
+            Debug.Assert(candyPrefab.candy.m_color == candyPrefab.bombPowerUp.m_color && candyPrefab.candy.m_color == candyPrefab.freezePowerUp.m_color, "All prefabs in the same vector index must be the same color");
+
+            List<Candy> candies = new List<Candy>();
+            candies.Add(candyPrefab.candy);
+            candies.Add(candyPrefab.bombPowerUp);
+            candies.Add(candyPrefab.freezePowerUp);
+            m_candyPrefabsDictonary.Add(candyPrefab.candy.m_color, candies);
         }
         foreach (ColorAssignment colorAssigned in m_candyColor2RGBAColor) {
             m_candyColor2RGBAColorDictonary.Add(colorAssigned.color, colorAssigned.rgbaColor);
@@ -77,8 +104,13 @@ public class BoardController : MonoBehaviour
         Destroy(m_spawn.gameObject);
 
         m_movedCandies = new List<Candy>();
+        m_candiesDestroyedByBombs = new HashSet<Candy>();
 
         BoardSetup();
+    }
+
+    private int RandomCandyTypeIndex() {
+        return (Random.Range(0, 100) > m_powerUpPercentualChance) ? 0 : m_selectedPowerUp;
     }
 
     private void BoardSetup() {
@@ -102,7 +134,7 @@ public class BoardController : MonoBehaviour
                 }
 
                 //******Candy Assignement
-                Candy prefabToInstantiate = m_candyPrefabsDictonary[(CandyColor)possibleColors[Random.Range(0, possibleColors.Count)]];
+                Candy prefabToInstantiate = m_candyPrefabsDictonary[(CandyColor)possibleColors[Random.Range(0, possibleColors.Count)]][RandomCandyTypeIndex()];
                 Candy candy = InstatiateCandyAtPosition(prefabToInstantiate, m_startSpawnPosition + new Vector2(i * m_distanceUnits, j * m_distanceUnits));
                 candy.SetUpPosition(new Vector2Int(i, j));
 
@@ -279,6 +311,18 @@ public class BoardController : MonoBehaviour
             m_board[candyPosition.x, candyPosition.y] = null;
             candy.Die();
         }
+
+        if (m_candiesDestroyedByBombs.Count > 0) {
+            candiesAreExploding = true;
+            m_candiesDestroyedByBombs.ExceptWith(candiesToDestory);
+            foreach (Candy candy in m_candiesDestroyedByBombs) {
+                Vector2Int candyPosition = candy.getBoardPosition();
+                m_board[candyPosition.x, candyPosition.y] = null;
+                candy.Die();
+            }
+            m_candiesDestroyedByBombs.Clear();
+            candiesAreExploding = false;
+        }
     }
 
     private void RefillBoard(){
@@ -308,14 +352,14 @@ public class BoardController : MonoBehaviour
 
         for (int i = 0; i < m_horizontalSize; i++) {
             for (int j = 0; j < m_verticalSize; j++) {
-                if (refillMatrix[i, j] < 0) {
+                if (refillMatrix[i, j] < 0 && m_board[i,j]) {
                     m_board[i, j].MoveDown(new Vector2Int(i, j + refillMatrix[i, j]), refillMatrix[i, j] * m_distanceUnits);
                     m_board[i, j + refillMatrix[i, j]] = m_board[i, j];
                 }
             }
            
             for (int j = 0; j < candiesToSpawn[i]; j++) {
-                Candy prefabToInstantiate = m_candyPrefabsDictonary.Values.ToList()[Random.Range(0, m_candyPrefabsDictonary.Count())];
+                Candy prefabToInstantiate = m_candyPrefabsDictonary.Values.ToList()[Random.Range(0, m_candyPrefabsDictonary.Count())][RandomCandyTypeIndex()];
                 Candy candy = InstatiateCandyAtPosition(prefabToInstantiate, m_startSpawnPosition + new Vector2(i * m_distanceUnits, (m_verticalSize + j) * m_distanceUnits));
 
                 int verticalIndex = m_verticalSize - candiesToSpawn[i] + j;
@@ -329,8 +373,41 @@ public class BoardController : MonoBehaviour
     }
 
     private void SpawnPoints(Vector2 position, int points, CandyColor candyColor) {
-        PointsController point = Instantiate(pointsController, position, pointsController.transform.rotation) as PointsController;
+        PointsController point = Instantiate(m_pointsController, position, m_pointsController.transform.rotation) as PointsController;
         point.gameObject.transform.SetParent(gameObject.transform, false);
         point.SetUp(position, points, m_candyColor2RGBAColorDictonary[candyColor]);
+    }
+
+    public void ActivateFreezePowerUp() {
+        if (m_remeiningPausedTime < 0f) {
+            m_remeiningPausedTime = m_freezePowerUpSeconds;
+            m_gameController.SetTimerActive(false);
+            StartCoroutine(CountDownPauseTime());
+        } else {
+            m_remeiningPausedTime = m_freezePowerUpSeconds;
+        }
+    }
+
+    private IEnumerator CountDownPauseTime() {
+        float timeStep = 0.1f;
+        while (m_remeiningPausedTime >= 0) {
+            yield return new WaitForSeconds(timeStep);
+            m_remeiningPausedTime -= timeStep;
+        }
+        m_gameController.SetTimerActive(true);
+        
+    }
+
+    public void ActivateBombPowerUp(Vector2Int bombPosition) {
+        if (!candiesAreExploding) {
+            for (int i = bombPosition.x - 1; i < bombPosition.x + 2; i++) {
+                for (int j = bombPosition.y - 1; j < bombPosition.y + 2; j++) {
+                    if (i >= 0 && i < m_verticalSize && j >= 0 && j < m_horizontalSize && m_board[i, j]) {
+                        m_candiesDestroyedByBombs.Add(m_board[i, j]);
+                    }
+                }
+            }
+        }
+        
     }
 }
