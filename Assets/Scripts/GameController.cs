@@ -5,10 +5,7 @@ using TMPro;
 
 public class GameController : MonoBehaviour
 {
-    [Header("Timer Settings")]
-    [SerializeField]
-    private float m_startTime = 60f;
-    [Space]
+    
     [Header("UI Settings")]
     [SerializeField]
     private GameObject m_pauseMenu = null;
@@ -20,6 +17,8 @@ public class GameController : MonoBehaviour
     private float m_remeiningTime;
     private Animator m_pauseAnimator;
     private bool m_timerIsActive = true;
+
+    public float m_startTime = 60f;
 
     private void Awake() {
         Debug.Assert(m_timerText != null, "Timer text is null");
@@ -38,6 +37,7 @@ public class GameController : MonoBehaviour
         }
     }
 
+
     public void Pause() {
         Time.timeScale = 0;
         m_pauseMenu.SetActive(true);
@@ -55,7 +55,7 @@ public class GameController : MonoBehaviour
 
     private void UpdateTimer() {
         m_remeiningTime -= Time.deltaTime;
-        m_timerText.SetText("TIME: " + (int) m_remeiningTime);
+        m_timerText.SetText(((int)m_remeiningTime).ToString());
     }
 
     public void SetTimerActive(bool active) {

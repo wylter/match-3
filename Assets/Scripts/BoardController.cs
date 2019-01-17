@@ -28,6 +28,8 @@ public class BoardController : MonoBehaviour
     private int m_distanceUnits = 100;
     [SerializeField]
     private GameController m_gameController = null;
+    [SerializeField]
+    private PointsController m_pointsController = null;
 
     [Space]
     [Header("Candy Prefabs Settings")]
@@ -37,22 +39,25 @@ public class BoardController : MonoBehaviour
     public ColorAssignment[] m_candyColor2RGBAColor = null;
 
     [Space]
+    [Header("Game Settings")]
+    public float m_startTime = 60f;
+
+    [Space]
     [Header("PowerUp Settings")]
     public int m_selectedPowerUp = 0;
     [SerializeField]
     public int m_powerUpPercentualChance;
     [SerializeField]
     public float m_freezePowerUpSeconds = 5f;
-
-    [Space]
-    [Header("Points Settings")]
     [SerializeField]
-    private PointsController m_pointsController = null;
+    public GameObject m_explosion;
+    
 
     private Dictionary<CandyColor, List<Candy>> m_candyPrefabsDictonary;
     private Dictionary<CandyColor, Color> m_candyColor2RGBAColorDictonary;
 
     private HashSet<Candy> m_candiesDestroyedByBombs;
+    private HashSet<Bomb> m_bombsDetonated;
     private bool candiesAreExploding = false;
 
     private Candy[,] m_board;
@@ -65,18 +70,19 @@ public class BoardController : MonoBehaviour
     private Vector2Int m_startPosition;
     private Vector2Int m_endPosition;
 
-    public int m_movingCandiesNumber = 0;
+    private int m_movingCandiesNumber = 0;
     private List<Candy> m_movedCandies;
-    public int m_dyingCandiesNumber = 0;
+    private int m_dyingCandiesNumber = 0;
 
-    public float m_remeiningPausedTime = -1f;
+    private float m_remeiningPausedTime = -1f;
 
     private void Awake(){
         Debug.Assert(m_spawn != null, "Spawn is null");
         Debug.Assert(m_candyPrefabs != null, "All candy prefabs are null");
         Debug.Assert(m_candyColor2RGBAColor.Length == System.Enum.GetNames(typeof(CandyColor)).Length, "Please define a color for each CandyColor");
         Debug.Assert(m_pointsController != null, "The points controller is null");
-        Debug.Assert(m_gameController != null, "GameController is null");
+        Debug.Assert(m_gameController != null, "GameController is null"); 
+        Debug.Assert(m_explosion != null, "Explosion is null");
 
         m_candyPrefabsDictonary = new Dictionary<CandyColor, List<Candy>>();
         m_candyColor2RGBAColorDictonary = new Dictionary<CandyColor, Color>();
@@ -103,8 +109,11 @@ public class BoardController : MonoBehaviour
         m_startSpawnPosition = m_spawn.anchoredPosition;
         Destroy(m_spawn.gameObject);
 
+        m_gameController.m_startTime = m_startTime;
+
         m_movedCandies = new List<Candy>();
         m_candiesDestroyedByBombs = new HashSet<Candy>();
+        m_bombsDetonated = new HashSet<Bomb>();
 
         BoardSetup();
     }
@@ -152,13 +161,16 @@ public class BoardController : MonoBehaviour
     }
 
     public void CandyStartTouch(Vector2Int candyPosition){
-        m_startPosition = candyPosition;
-        m_touchStarted = true;
+        if (m_canSwap) {
+            m_startPosition = candyPosition;
+            m_touchStarted = true;
+        }
     }
 
-    public void CandyReleaseTouch()
-    {
-        m_touchStarted = false;
+    public void CandyReleaseTouch(){
+        if (m_canSwap) {
+            m_touchStarted = false;
+        }
     }
 
     public void CandyOverTouch(Vector2Int candyPosition)
@@ -312,8 +324,11 @@ public class BoardController : MonoBehaviour
             candy.Die();
         }
 
-        if (m_candiesDestroyedByBombs.Count > 0) {
+        
+
+        if (m_bombsDetonated.Count > 0) {
             candiesAreExploding = true;
+            DetonateBombs();
             m_candiesDestroyedByBombs.ExceptWith(candiesToDestory);
             foreach (Candy candy in m_candiesDestroyedByBombs) {
                 Vector2Int candyPosition = candy.getBoardPosition();
@@ -398,8 +413,25 @@ public class BoardController : MonoBehaviour
         
     }
 
-    public void ActivateBombPowerUp(Vector2Int bombPosition) {
+    public void ActivateBombPowerUp(Bomb bomb) {
         if (!candiesAreExploding) {
+            m_bombsDetonated.Add(bomb);
+        }
+        
+    }
+
+    private void DetonateBombs() {
+        foreach (Bomb bomb in m_bombsDetonated) {
+
+            Vector2Int bombPosition = bomb.getBoardPosition();
+
+            GameObject explosion = Instantiate(m_explosion);
+            explosion.transform.SetParent(transform, false);
+            explosion.GetComponent<RectTransform>().position = bomb.GetComponent<RectTransform>().position;
+            
+            
+            Destroy(explosion, 1f);
+
             for (int i = bombPosition.x - 1; i < bombPosition.x + 2; i++) {
                 for (int j = bombPosition.y - 1; j < bombPosition.y + 2; j++) {
                     if (i >= 0 && i < m_verticalSize && j >= 0 && j < m_horizontalSize && m_board[i, j]) {
@@ -408,6 +440,7 @@ public class BoardController : MonoBehaviour
                 }
             }
         }
-        
+
+        m_bombsDetonated.Clear();
     }
 }
